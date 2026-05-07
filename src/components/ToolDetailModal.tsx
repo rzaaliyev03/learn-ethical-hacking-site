@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CheckCircle2, ShieldAlert, Cpu } from 'lucide-react';
 import { Tool } from '../data/hackingData';
+import { useLanguage } from '../i18n/context';
 
 interface ToolDetailModalProps {
   tool: Tool | null;
@@ -8,7 +9,16 @@ interface ToolDetailModalProps {
 }
 
 export default function ToolDetailModal({ tool, onClose }: ToolDetailModalProps) {
+  const { language } = useLanguage();
   if (!tool) return null;
+
+  const getTitle = () => (tool as any).name || tool.title;
+  const getDescription = () => {
+    if (typeof tool.description === 'object') {
+      return (tool.description as any)[language] || (tool.description as any)['az'];
+    }
+    return tool.description;
+  };
 
   return (
     <AnimatePresence>
@@ -51,7 +61,7 @@ export default function ToolDetailModal({ tool, onClose }: ToolDetailModalProps)
                 </span>
               </div>
               
-              <h2 className="text-4xl font-bold mb-6">{tool.title}</h2>
+              <h2 className="text-4xl font-bold mb-6">{getTitle()}</h2>
               
               <div className="space-y-8">
                 <div>
@@ -59,18 +69,20 @@ export default function ToolDetailModal({ tool, onClose }: ToolDetailModalProps)
                     <CheckCircle2 size={16} /> Haqqında
                   </h3>
                   <p className="text-gray-400 leading-relaxed">
-                    {tool.description}
+                    {getDescription()}
                   </p>
                 </div>
 
-                <div>
-                  <h3 className="text-cyber-green font-mono uppercase text-sm mb-3 flex items-center gap-2">
-                    <ShieldAlert size={16} /> Necə İstifadə Olunur?
-                  </h3>
-                  <p className="text-gray-400 leading-relaxed italic">
-                    {tool.howToUse}
-                  </p>
-                </div>
+                {tool.howToUse && (
+                  <div>
+                    <h3 className="text-cyber-green font-mono uppercase text-sm mb-3 flex items-center gap-2">
+                      <ShieldAlert size={16} /> Necə İstifadə Olunur?
+                    </h3>
+                    <p className="text-gray-400 leading-relaxed italic">
+                      {tool.howToUse}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="text-cyber-green font-mono uppercase text-sm mb-3 flex items-center gap-2">
@@ -89,12 +101,15 @@ export default function ToolDetailModal({ tool, onClose }: ToolDetailModalProps)
                 <div className="bg-black/40 rounded-2xl p-6 border border-white/5">
                   <h4 className="text-white font-mono text-sm mb-4">İcra Komandaları:</h4>
                   <div className="space-y-4">
-                    {tool.commands.map((cmd, i) => (
+                    {tool.commands?.map((cmd, i) => (
                       <div key={i}>
                         <code className="text-cyber-green text-sm">$ {cmd.cmd}</code>
                         <p className="text-xs text-gray-500 mt-1"># {cmd.desc}</p>
                       </div>
                     ))}
+                    {(!tool.commands || tool.commands.length === 0) && (
+                      <p className="text-xs text-gray-600 italic">Bu alət üçün komanda nümunəsi tapılmadı.</p>
+                    )}
                   </div>
                 </div>
               </div>

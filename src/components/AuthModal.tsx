@@ -1,13 +1,14 @@
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Lock, Mail, User } from 'lucide-react';
-import { useState } from 'react';
 import { auth, db } from '../lib/firebase';
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useLanguage } from '../i18n/context';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
+  const { t } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,38 +33,28 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        // Registration logic
-        if (password.length < 6) throw new Error('Şifrə ən azı 6 simvol olmalıdır');
+        if (password.length < 6) throw new Error(t('auth.error_weak_pass') || 'Şifrə çox zəifdir');
         
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
         await updateProfile(user, { displayName });
 
-        // Save to Firestore
-        try {
-          await setDoc(doc(db, 'users', user.uid), {
-            uid: user.uid,
-            email: user.email,
-            displayName,
-            role: 'user',
-            createdAt: serverTimestamp()
-          });
-        } catch (fsErr: any) {
-          console.error("Firestore Error:", fsErr);
-          // If Firestore fails, we still have the user in Auth but the document is missing.
-          // This can happen if rules are not deployed or wrong.
-          throw new Error("Hesab yaradıldı, lakin profil məlumatları bazaya yazıla bilmədi: " + fsErr.message);
-        }
+        await setDoc(doc(db, 'users', user.uid), {
+          uid: user.uid,
+          email: user.email,
+          displayName,
+          role: 'user',
+          createdAt: serverTimestamp()
+        });
       }
       onClose();
     } catch (err: any) {
       console.error("Auth process error:", err);
       let localizedError = err.message;
-      if (err.code === 'auth/email-already-in-use') localizedError = 'Bu email artıq istifadə olunub.';
-      if (err.code === 'auth/weak-password') localizedError = 'Şifrə çox zəifdir.';
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') localizedError = 'Email və ya şifrə yanlışdır.';
-      if (err.code === 'auth/operation-not-allowed') localizedError = 'Giriş üsulu aktiv deyil. Firebase-də Email/Password-u aktiv edin.';
+      if (err.code === 'auth/email-already-in-use') localizedError = t('auth.email_exists');
+      if (err.code === 'auth/weak-password') localizedError = t('auth.error_weak_pass');
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') localizedError = t('auth.error_invalid');
       
       setError(localizedError);
     } finally {
@@ -79,85 +71,85 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/90 backdrop-blur-md"
           />
           <motion.div
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            initial={{ scale: 0.9, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-md bg-cyber-gray border border-cyber-green/30 p-8 rounded-2xl shadow-2xl"
+            exit={{ scale: 0.9, opacity: 0, y: 30 }}
+            className="relative w-full max-w-md bg-cyber-gray border border-white/10 p-10 rounded-3xl shadow-2xl shadow-cyber-green/5"
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
             >
               <X size={24} />
             </button>
 
-            <h2 className="text-2xl font-mono font-bold mb-6 text-cyber-green uppercase tracking-wider">
-              {isLogin ? 'Terminal Giriş' : 'Yeni Hesab'}
+            <h2 className="text-3xl font-mono font-bold mb-8 text-cyber-green uppercase tracking-tighter">
+              {isLogin ? (t('nav.login') || 'GİRİŞ') : (t('auth.register') || 'QEYDİYYAT')}
             </h2>
 
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-3 rounded-lg text-xs font-mono mb-4">
-                [ERROR] {error}
+              <div className="bg-red-500/10 border border-red-500/30 text-red-500 p-4 rounded-xl text-xs font-mono mb-6 animate-pulse">
+                [SYSTEM_ERROR] // {error}
               </div>
             )}
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {!isLogin && (
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                   <input
                     type="text"
                     required
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Tam adınız"
-                    className="w-full bg-black/40 border border-white/10 rounded-lg py-3 pl-10 pr-4 focus:border-cyber-green outline-none transition-colors font-mono"
+                    placeholder={t('profile.username') || "Username"}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 focus:border-cyber-green outline-none transition-all text-white"
                   />
                 </div>
               )}
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email ünvanı"
-                  className="w-full bg-black/40 border border-white/10 rounded-lg py-3 pl-10 pr-4 focus:border-cyber-green outline-none transition-colors font-mono"
+                  placeholder="Email"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 focus:border-cyber-green outline-none transition-all text-white"
                 />
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={20} />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={18} />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Şifrə"
-                  className="w-full bg-black/40 border border-white/10 rounded-lg py-3 pl-10 pr-4 focus:border-cyber-green outline-none transition-colors font-mono"
+                  placeholder="Password"
+                  className="w-full bg-black/40 border border-white/10 rounded-xl py-3.5 pl-12 pr-4 focus:border-cyber-green outline-none transition-all text-white"
                 />
               </div>
 
               <button 
                 type="submit"
                 disabled={loading}
-                className="w-full bg-cyber-green text-black font-bold py-3 rounded-lg hover:bg-cyber-green/90 transition-colors uppercase tracking-widest mt-4 disabled:opacity-50"
+                className="w-full bg-cyber-green text-black font-black py-4 rounded-xl hover:bg-cyber-green/90 transition-all uppercase tracking-widest mt-6 disabled:opacity-50 shadow-lg shadow-cyber-green/10"
               >
-                {loading ? 'Yüklənir...' : (isLogin ? 'Giriş Et' : 'Qeydiyyatdan Keç')}
+                {loading ? t('auth.loading') : (isLogin ? (t('nav.login') || 'Giriş') : (t('auth.register') || 'Qeydiyyat'))}
               </button>
             </form>
 
-            <div className="mt-6 text-center">
+            <div className="mt-8 text-center">
               <button
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-sm text-gray-400 hover:text-cyber-green transition-colors"
+                className="text-xs text-gray-500 hover:text-cyber-green transition-colors font-bold uppercase tracking-widest"
               >
                 {isLogin
-                  ? "Hesabınız yoxdur? Qeydiyyatdan keçin"
-                  : "Artıq hesabınız var? Giriş edin"}
+                  ? (t('auth.register') || "Qeydiyyatdan keç")
+                  : (t('nav.login') || "Giriş et")}
               </button>
             </div>
           </motion.div>

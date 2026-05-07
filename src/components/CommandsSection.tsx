@@ -1,10 +1,14 @@
 import { motion } from 'motion/react';
-import { COMMON_COMMANDS } from '../data/hackingData';
+import { LINUX_COMMANDS } from '../constants/content';
 import { Terminal, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
+import { useLanguage } from '../i18n/context';
 
-export default function CommandsSection() {
+export default function CommandsSection({ limit }: { limit?: number }) {
+  const { t, language } = useLanguage();
   const [copied, setCopied] = useState<string | null>(null);
+
+  const displayCommands = limit ? LINUX_COMMANDS.slice(0, limit) : LINUX_COMMANDS;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -13,54 +17,53 @@ export default function CommandsSection() {
   };
 
   return (
-    <section id="commands" className="bg-black/30 w-full !max-w-none">
-      <div className="max-w-7xl mx-auto py-20 px-6">
+    <section id="commands" className="bg-black/30 w-full !max-w-none border-t border-white/5">
+      <div className="max-w-7xl mx-auto py-24 px-6">
         <div className="mb-16 text-center">
-          <h2 className="text-4xl font-mono font-bold mb-4">
-            ƏN ÇOX İSTİFADƏ OLUNAN <span className="text-cyber-green">KOMANDALAR</span>
+          <h2 className="text-4xl md:text-5xl font-mono font-bold mb-6 text-white uppercase tracking-tighter">
+            {t('commands.title')}
           </h2>
-          <p className="text-gray-500 max-w-2xl mx-auto">
-            Hacking və sistem idarəçiliyi üçün hər bir mütəxəssis tərəfindən hər gün istifadə olunan əsas terminal kodları.
+          <p className="text-gray-500 max-w-2xl mx-auto text-lg">
+            {t('commands.desc')}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {COMMON_COMMANDS.map((cmd, idx) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {displayCommands.map((cmd, idx) => (
             <motion.div
               key={cmd.name}
-              initial={{ opacity: 0, x: idx % 2 === 0 ? -20 : 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.02 }}
               viewport={{ once: true }}
-              className="bg-cyber-gray border border-white/5 rounded-2xl p-8 hover:border-cyber-green/30 transition-all"
+              className="bg-cyber-gray border border-white/5 rounded-2xl p-6 hover:border-cyber-green/20 transition-all group relative overflow-hidden"
             >
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-cyber-green/10 rounded-xl flex items-center justify-center text-cyber-green">
-                  <Terminal size={24} />
-                </div>
-                <h3 className="text-2xl font-bold font-mono">{cmd.name}</h3>
+              <div className="absolute top-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => copyToClipboard(cmd.name)}
+                  className="p-2 bg-white/5 hover:bg-cyber-green hover:text-black rounded-lg transition-all border border-white/5"
+                >
+                  {copied === cmd.name ? <Check size={14} /> : <Copy size={14} />}
+                </button>
               </div>
 
-              <p className="text-gray-400 mb-6 leading-relaxed">
-                {cmd.description}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-10 h-10 bg-cyber-green/10 rounded-xl flex items-center justify-center text-cyber-green border border-cyber-green/20 shadow-lg shadow-cyber-green/5">
+                  <Terminal size={20} />
+                </div>
+                <h3 className="text-xl font-bold font-mono text-white group-hover:text-cyber-green transition-colors">{cmd.name}</h3>
+              </div>
+
+              <p className="text-gray-400 text-sm leading-relaxed font-medium">
+                {cmd.description[language as 'az' | 'en' | 'ru']}
               </p>
 
-              <div className="relative group">
-                <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => copyToClipboard(cmd.command)}
-                    className="p-2 bg-white/10 hover:bg-cyber-green hover:text-black rounded-lg transition-all"
-                  >
-                    {copied === cmd.command ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
+              <div className="mt-6 pt-4 border-t border-white/5 flex items-center justify-between">
+                <span className="text-[10px] font-mono uppercase text-gray-600 font-bold tracking-widest italic animate-pulse">bash_cmd</span>
+                <div className="flex gap-1">
+                  <div className="w-1 h-1 rounded-full bg-cyber-green/40"></div>
+                  <div className="w-1 h-1 rounded-full bg-cyber-green/20"></div>
                 </div>
-                <pre className="bg-black/50 p-6 rounded-xl font-mono text-sm text-cyber-green overflow-x-auto border border-white/5">
-                  <code>$ {cmd.command}</code>
-                </pre>
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-white/5 flex items-center justify-between">
-                <span className="text-xs font-mono uppercase text-gray-500 italic">Nümunə istifadə:</span>
-                <code className="text-xs bg-white/5 px-2 py-1 rounded text-gray-300">{cmd.example}</code>
               </div>
             </motion.div>
           ))}
